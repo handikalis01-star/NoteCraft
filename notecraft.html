@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteCraft - Aplikasi Catatan Markdown</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <header class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-note-sticky text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">NoteCraft</h1>
+                    <p class="text-xs text-slate-400">Markdown & LocalStorage</p>
+                </div>
+            </div>
+
+            <!-- Stats & Quick Actions -->
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-6 text-xs text-slate-400 bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-xl">
+                    <div>Total: <span id="statTotal" class="font-bold text-indigo-400">0</span></div>
+                    <div class="w-px h-3 bg-slate-700"></div>
+                    <div>Kata: <span id="statWords" class="font-bold text-emerald-400">0</span></div>
+                </div>
+                <button onclick="createNewNote()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-plus text-xs"></i> Catatan Baru
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- SIDEBAR: Note List & Search -->
+        <section class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col h-[calc(100vh-10rem)] shadow-xl">
+            <!-- Search & Filter -->
+            <div class="space-y-3 mb-4">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                        <i class="fa-solid fa-search text-sm"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="handleSearch(event)" placeholder="Cari judul atau isi catatan..."
+                        class="w-full bg-slate-950/70 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all">
+                </div>
+                
+                <!-- Category Tags Filter -->
+                <div id="tagFilterContainer" class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+                    <button onclick="filterByCategory('all')" data-tag="all" class="filter-btn px-3 py-1.5 rounded-xl font-medium bg-indigo-600 text-white transition-all whitespace-nowrap cursor-pointer">Semua</button>
+                    <button onclick="filterByCategory('Pribadi')" data-tag="Pribadi" class="filter-btn px-3 py-1.5 rounded-xl font-medium bg-slate-800 text-slate-400 hover:text-white transition-all whitespace-nowrap cursor-pointer">Pribadi</button>
+                    <button onclick="filterByCategory('Kerja')" data-tag="Kerja" class="filter-btn px-3 py-1.5 rounded-xl font-medium bg-slate-800 text-slate-400 hover:text-white transition-all whitespace-nowrap cursor-pointer">Kerja</button>
+                    <button onclick="filterByCategory('Ide')" data-tag="Ide" class="filter-btn px-3 py-1.5 rounded-xl font-medium bg-slate-800 text-slate-400 hover:text-white transition-all whitespace-nowrap cursor-pointer">Ide</button>
+                </div>
+            </div>
+
+            <!-- Notes List Container -->
+            <div id="notesListContainer" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
+        <section class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col h-[calc(100vh-10rem)] shadow-xl relative">
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-slate-900/80 backdrop-blur-sm rounded-3xl z-10">
+                <div class="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-slate-400 mb-4 text-2xl">
+                    <i class="fa-solid fa-pen-nib"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-200">Belum ada catatan yang dipilih</h3>
+                <p class="text-sm text-slate-400 max-w-sm mt-1">Pilih catatan dari daftar di sebelah kiri atau buat catatan baru untuk mulai menulis dengan Markdown.</p>
+                <button onclick="createNewNote()" class="mt-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 cursor-pointer">
+                    Buat Catatan Sekarang
+                </button>
+            </div>
+
+            <!-- Editor Active Toolbar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-800">
+                <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                    <input type="text" id="noteTitleInput" oninput="autoSaveNote()" placeholder="Judul catatan..."
+                        class="w-full bg-transparent font-bold text-lg sm:text-xl text-slate-100 placeholder-slate-600 focus:outline-none">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- Category Selector -->
+                    <select id="noteCategorySelect" onchange="autoSaveNote()" class="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                        <option value="Pribadi">Pribadi</option>
+                        <option value="Kerja">Kerja</option>
+                        <option value="Ide">Ide</option>
+                    </select>
+
+                    <!-- View Mode Toggle -->
+                    <div class="bg-slate-950/80 border border-slate-800 p-1 rounded-xl flex items-center">
+                        <button onclick="switchView('edit')" id="btnEdit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition-all cursor-pointer">Edit</button>
+                        <button onclick="switchView('preview')" id="btnPreview" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all cursor-pointer">Preview</button>
+                    </div>
+
+                    <!-- Delete Note Button -->
+                    <button onclick="deleteActiveNote()" title="Hapus Catatan" class="w-9 h-9 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 flex items-center justify-center transition-all cursor-pointer">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor / Preview Body Container -->
+            <div class="flex-1 relative overflow-hidden flex flex-col">
+                <!-- Markdown Textarea -->
+                <textarea id="noteContentInput" oninput="autoSaveNote()" placeholder="Tulis catatanmu dalam format Markdown di sini... (# Judul, **tebal**, - list, dll)"
+                    class="w-full h-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none resize-none leading-relaxed"></textarea>
+
+                <!-- Markdown Preview Render Area -->
+                <div id="markdownPreview" class="hidden w-full h-full overflow-y-auto prose prose-invert prose-indigo max-w-none text-sm text-slate-300 pr-2">
+                    <!-- Rendered html goes here -->
+                </div>
+            </div>
+
+            <!-- Footer Meta info -->
+            <div class="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+                <span id="lastModifiedText">Terakhir disimpan: -</span>
+                <span id="currentNoteWords">0 kata</span>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
